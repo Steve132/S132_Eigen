@@ -71,7 +71,7 @@ namespace detail{
 		template<class InputMatrix>
 		void compute(const Eigen::MatrixBase<InputMatrix> &inp)
 		{
-			compute(inp,Eigen::RowVector2d{1.0,1.0});
+			compute(inp,GeomOf<DataMatrixType>::default_ones(inp));
 		}
 		template<class InputMatrix>
 		NullVectorSolverCov(const Eigen::MatrixBase<InputMatrix>& inp)
