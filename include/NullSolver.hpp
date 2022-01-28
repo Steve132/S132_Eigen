@@ -14,70 +14,73 @@ struct NullVectorSolver{
 namespace detail{
 
 	template<class MatrixType>
-	struct RowOf{
-		using Result=decltype(MatrixType{}.row(0));
-		using Vec=typename Result::PlainMatrix;
-		using VecT=decltype(Vec{}.adjoint());
+	struct GeomOf{
+		using _RVec=decltype(MatrixType{}.row(0));
+		using Vec=typename _RVec::PlainMatrix;
 
-		static auto default_ones(const Eigen::EigenBase<MatrixType>& A)
+		using _RVecT=decltype(Vec{}.adjoint());
+		using VecT=typename _RVecT::PlainMatrix;
+
+		using _RCovMatrixType=decltype(VecT{}*Vec{});
+		using CovMatrixType=typename _RCovMatrixType::PlainMatrix;
+		static auto default_ones(const Eigen::MatrixBase<MatrixType>& A)
 		{
 			return Vec::Ones(A.cols());
 		}
 	};
 
-	template<class InputType>
-	auto GetCov(const Eigen::EigenBase<InputType>& A,
-		const Eigen::EigenBase<typename RowOf<InputType>::Vec>& cvec)
+	template<class InputType,class Input2>
+	auto GetCov(const Eigen::MatrixBase<InputType>& A,
+		const Eigen::MatrixBase<Input2>& cvec)
 	{
 		return A.adjoint()*A+cvec.adjoint()*cvec;
 	}
 
-	template<class DataMatrixType>
-	struct NullVectorSolverCovBase{
-		using CovMatrixType=Eigen::Matrix<
-			typename DataMatrixType::Scalar,
-			DataMatrixType::ColsAtCompileTime,
-			DataMatrixType::ColsAtCompileTime,
-			DataMatrixType::Flags,
-			DataMatrixType::MaxColsAtCompileTime,
-			DataMatrixType::MaxColsAtCompileTime
-		>;
-	};
-
 	template<
 		class DataMatrixType,
 		template<class MT>
-			class LUType
+			class SolverType
 	>
 	struct NullVectorSolverCov:
-			private LUType<typename NullVectorSolverCovBase<DataMatrixType>::CovMatrixType>
+			public SolverType<typename GeomOf<DataMatrixType>::CovMatrixType>
 	{
 	public:
-		using UnitaryConstraintType=typename RowOf<DataMatrixType>::Vec;
-		using ResultType=typename RowOf<DataMatrixType>::VecT;
+		using UnitaryConstraintType=typename GeomOf<DataMatrixType>::Vec;
+		using ResultType=typename GeomOf<DataMatrixType>::VecT;
 	protected:
-		using Base=LUType<typename NullVectorSolverCovBase<DataMatrixType>::CovMatrixType>;
-		using CovMatrixType=typename NullVectorSolverCovBase<DataMatrixType>::CovMatrixType;
+		using CovMatrixType=typename GeomOf<DataMatrixType>::CovMatrixType;
+		using Base=SolverType<CovMatrixType>;
 
 		UnitaryConstraintType uconst;
-		LUType<CovMatrixType> lu;
+		//SolverType<CovMatrixType> solver;
 	public:
-		NullVectorSolverLU(const Eigen::EigenBase<DataMatrixType>& inp,
-			const Eigen::EigenBase<UnitaryConstraintType>& unitary_constraint){
+
+		template<class InputMatrix1,class InputMatrix2>
+		NullVectorSolverCov(
+				const Eigen::MatrixBase<InputMatrix1>& inp,
+				const Eigen::MatrixBase<InputMatrix2>& unitary_constraint)
+		{
 			compute(inp,unitary_constraint);
 		}
-		NullVectorSolverLU(const Eigen::EigenBase<DataMatrixType>& inp){
+		template<class InputMatrix1,class InputMatrix2>
+		void compute(const Eigen::MatrixBase<InputMatrix1>& inp,
+					 const Eigen::MatrixBase<InputMatrix2>& unitary_constraint)
+		{
+			Base::compute(GetCov(inp,unitary_constraint));
+		}
+		template<class InputMatrix>
+		void compute(const Eigen::MatrixBase<InputMatrix> &inp)
+		{
+			compute(inp,Eigen::RowVector2d{1.0,1.0});
+		}
+		template<class InputMatrix>
+		NullVectorSolverCov(const Eigen::MatrixBase<InputMatrix>& inp)
+		{
 			compute(inp);
 		}
-		auto solve() const{
-			return lu.solve(uconst.adjoint());
-		}
-		void compute(const Eigen::EigenBase<DataMatrixType>& inp,
-					 const Eigen::EigenBase<UnitaryConstraintType>& unitary_constraint)
-		{}
-		void compute(const Eigen::EigenBase<S132_Eigen::detail::DataMatrixType> &inp)
-		{
-			compute(inp,RowOf<DataMatrixType>::default_ones(inp));
+
+		auto solve() {
+			return Base::solve(uconst.adjoint());
 		}
 	};
 }
