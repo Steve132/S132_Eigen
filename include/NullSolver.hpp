@@ -53,13 +53,13 @@ namespace detail{
 	auto GetStack(const Eigen::MatrixBase<InputType>& A,
 		const Eigen::MatrixBase<Input2>& cvec)
 	{
-		return (typename GeomOf<InputType>::QRMatrixType::Zero(A.rows()+1,A.cols()) << A,cvec);
+		return (GeomOf<InputType>::QRMatrixType::Zero(A.rows()+1,A.cols()) << A,cvec);
 	}
 	template<class InputType>
 	auto GetQrRHS(size_t rows)
 	{
-		return (typename GeomOf<InputType>::QRColType::Zero(rows) <<
-			typename GeomOf<InputType>::ColType::Zero(rows+1),1.0
+		return (GeomOf<InputType>::QRColType::Zero(rows+1) <<
+			GeomOf<InputType>::ColType::Zero(rows),1.0
 		);
 	}
 
@@ -92,6 +92,7 @@ namespace detail{
 		void compute(const Eigen::MatrixBase<InputMatrix1>& inp,
 					 const Eigen::MatrixBase<InputMatrix2>& unitary_constraint)
 		{
+			uconst=unitary_constraint;
 			Base::compute(GetCov(inp,unitary_constraint));
 		}
 		template<class InputMatrix>
@@ -227,7 +228,9 @@ template<
 struct NullVectorSolver<DataMatrixType,
 		Eigen::PartialPivLU>:
 	public detail::NullVectorSolverCov<DataMatrixType,Eigen::PartialPivLU>
-{};
+{
+	using detail::NullVectorSolverCov<DataMatrixType,Eigen::PartialPivLU>::NullVectorSolverCov;
+};
 
 template<
 	class DataMatrixType
@@ -235,7 +238,9 @@ template<
 struct NullVectorSolver<DataMatrixType,
 		Eigen::FullPivLU>:
 	public detail::NullVectorSolverCov<DataMatrixType,Eigen::FullPivLU>
-{};
+{
+	using detail::NullVectorSolverCov<DataMatrixType,Eigen::FullPivLU>::NullVectorSolverCov;
+};
 
 template<
 	class DataMatrixType
@@ -247,7 +252,13 @@ struct NullVectorSolver<DataMatrixType,
 			Eigen::Lower //Todo: uplo
 		>::SolverType
 	>
-{};
+{
+	using detail::NullVectorSolverCov<DataMatrixType,
+			detail::SolverWrapper<Eigen::LLT,
+				Eigen::Lower //Todo: uplo
+			>::SolverType
+		>::NullVectorSolverCov;
+};
 
 template<
 	class DataMatrixType
@@ -259,7 +270,13 @@ struct NullVectorSolver<DataMatrixType,
 			Eigen::Lower
 		>::SolverType
 	>
-{};
+{
+	using detail::NullVectorSolverCov<DataMatrixType,
+			detail::SolverWrapper<Eigen::LDLT,
+				Eigen::Lower
+			>::SolverType
+		>::NullVectorSolverCov;
+};
 
 template<
 	class DataMatrixType
@@ -267,28 +284,36 @@ template<
 struct NullVectorSolver<DataMatrixType,
 		Eigen::HouseholderQR>:
 	public detail::NullVectorSolverQR<DataMatrixType,Eigen::HouseholderQR>
-{};
+{
+	using detail::NullVectorSolverQR<DataMatrixType,Eigen::HouseholderQR>::NullVectorSolverQR;
+};
 template<
 	class DataMatrixType
 >
 struct NullVectorSolver<DataMatrixType,
 		Eigen::ColPivHouseholderQR>:
 	public detail::NullVectorSolverQR<DataMatrixType,Eigen::ColPivHouseholderQR>
-{};
+{
+	using detail::NullVectorSolverQR<DataMatrixType,Eigen::ColPivHouseholderQR>::NullVectorSolverQR;
+};
 template<
 	class DataMatrixType
 >
 struct NullVectorSolver<DataMatrixType,
 		Eigen::FullPivHouseholderQR>:
 	public detail::NullVectorSolverQR<DataMatrixType,Eigen::FullPivHouseholderQR>
-{};
+{
+	using detail::NullVectorSolverQR<DataMatrixType,Eigen::FullPivHouseholderQR>::NullVectorSolverQR;
+};
 template<
 	class DataMatrixType
 >
 struct NullVectorSolver<DataMatrixType,
 		Eigen::CompleteOrthogonalDecomposition>:
 	public detail::NullVectorSolverQR<DataMatrixType,Eigen::CompleteOrthogonalDecomposition>
-{};
+{
+	using detail::NullVectorSolverQR<DataMatrixType,Eigen::CompleteOrthogonalDecomposition>::NullVectorSolverQR;
+};
 
 template<
 	class DataMatrixType
@@ -298,7 +323,11 @@ struct NullVectorSolver<DataMatrixType,
 	public detail::NullVectorSolverSVD<DataMatrixType,
 		Eigen::BDCSVD
 	>
-{};
+{
+	using detail::NullVectorSolverSVD<DataMatrixType,
+			Eigen::BDCSVD
+		>::NullVectorSolverSVD;
+};
 
 template<
 	class DataMatrixType
@@ -310,7 +339,13 @@ struct NullVectorSolver<DataMatrixType,
 				Eigen::ColPivHouseholderQRPreconditioner
 			>::SolverType
 		>
-{};
+{
+	using detail::NullVectorSolverSVD<DataMatrixType,
+				detail::SolverWrapper<Eigen::JacobiSVD,
+					Eigen::ColPivHouseholderQRPreconditioner
+				>::SolverType
+			>::NullVectorSolverSVD;
+};
 }
 
 #endif
